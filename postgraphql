@@ -1,0 +1,170 @@
+npm start
+postgraphql -c postgres://madi:madi@localhost:5432/madi -o
+http://localhost:5000/graphql
+http://localhost:5000/graphiql
+sudo -u postgres psql
+create user madi with password 'madi';
+create database madi with owner madi;
+\c madi
+create table "user"
+(
+id serial primary key,
+name text not null,
+email text not null,
+password text not null,
+createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+create table link(
+id serial primary key,
+description text not null,
+url text not null,
+postedBy integer not null references "user"(id)
+);
+
+create table vote (
+id serial primary key,
+"user" integer references "user" (id),
+link integer references link (id));
+
+select * from "user"; select * from link; select * from vote;
+
+создать пользователя
+mutation{
+  createUser(input:{
+    user:{
+      name: "Dima"
+      password: "123456"
+      email: "mail@mail.com"
+    }
+  }) {
+    userEdge{
+      node{
+        name
+        email
+        password
+      }
+    }
+  } 
+}
+
+
+получить пользователя
+query{
+  allUsers(first:5){
+    edges{
+      cursor
+      node{
+        name
+        email
+        password
+      }
+    }
+  }
+}
+
+
+создать сслыку
+mutation{
+  createLink(input:{
+		link:{
+      description:"hello world!!"
+      url:"https://google.com"
+      postedby: 1
+    }
+  }) {
+    linkEdge{
+      node{
+        url
+        description
+        postedby
+      }
+    }
+  }
+}
+
+получить посты
+query{
+  allLinks(first:1, offset: 2){
+    edges{
+      node{
+        url
+        description
+        id
+      }
+    }
+  }
+}
+
+получить посты пользователя
+query{
+  allLinks(condition:{postedby:1}){
+    edges{
+      node{
+        url
+        description
+        id
+        postedby
+      }
+    }
+  }
+}
+
+create extension if not exists "pgcrypto";
+
+зарегестрировать нового пользователя
+
+create function register_person(
+  name text,
+  email text,
+  password text
+) returns "user" as $$
+declare
+  user "user";
+begin
+  insert into "user" (name, email, password) values
+    (name, email, password)
+    returning * into user;
+
+  return user;
+end;
+$$ language plpgsql strict security definer;
+
+токен jwt
+create type jwt_token as (
+  role text,
+  user_id integer
+);
+
+авторизация
+
+create function authenticate(
+  email text,
+  password text
+) returns "user" as $$
+declare
+  account "user";
+begin
+  select a.* into account
+  from "user" as a
+  where a.email = $1;
+
+  if account.password = password then
+    return account;
+  else
+    return null;
+  end if;
+end;
+$$ language plpgsql strict security definer;
+
+авторизация
+mutation{
+  authenticate(input:{
+    email: "mail@mail.com",
+    password : "123456"
+  }) {
+    clientMutationId
+  }
+}
+
+
