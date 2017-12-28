@@ -84,7 +84,7 @@ const SIGNUP_USER_MUTATION = gql`
       token
     }
   }
-`
+`;
 
 const AUTHENTICATE_USER_MUTATION = gql`
     mutation AuthenticateUserMutation($email: String!, $password: String!) {
